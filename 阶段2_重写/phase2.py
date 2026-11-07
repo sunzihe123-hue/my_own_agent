@@ -49,7 +49,20 @@ def load_dotenv(path: Path) -> None:
       - **已经存在的环境变量不能被覆盖**（真实部署时是用环境变量覆盖 .env 的）
     提示：os.environ.setdefault(key, value) 就是"不存在才设置"。
     """
-    raise NotImplementedError("TODO 第 1 步")
+    if not path.exists():
+        return
+    with path.open("r",encoding = "utf-8") as f:
+        text = f.read()
+    lines = text.splitlines()
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#") or '=' not in line:
+            continue
+        key,value = raw.split("=",1)
+        key,value = key.strip() , value.strip().strip("'").strip('"')
+
+        os.environ.setdefault(key,value)
+
 
 
 # ============================================================================
@@ -59,7 +72,7 @@ def load_dotenv(path: Path) -> None:
 
 @dataclass
 class Config:
-    """一次请求需要的全部配置。字段已给你，实现 load_config 就行。"""
+    """一次请求需要的全部配置。字段已给，实现 load_config 。"""
 
     provider: str
     api_key: str
@@ -77,7 +90,26 @@ def load_config(env_file: Path | None = None) -> Config:
       - api_key 读 STUDYMATE_API_KEY，默认空串 ""
       - base_url / model 先取厂商预设，允许被 STUDYMATE_BASE_URL / STUDYMATE_MODEL 覆盖
     """
-    raise NotImplementedError("TODO 第 2 步")
+    load_dotenv(env_file or Path(".env"))
+    provider = os.getenv("STUDYMATE_PROVIDER", "fake").lower()
+
+    if provider not in PROVIDERS:
+        raise ValueError(f"未知的 provider：{provider}，可选：{', '.join(PROVIDERS)}")
+    api_key = os.getenv("STUDYMATE_API_KEY", "")
+
+    preset = PROVIDERS[provider]
+
+    base_url = os.getenv("STUDYMATE_BASE_URL", preset["base_url"])
+    model = os.getenv("STUDYMATE_MODEL", preset["model"])
+    return Config(
+        provider=provider,
+        api_key=api_key,
+        base_url=base_url,
+        model=model,
+    )
+
+
+
 
 
 # ============================================================================
@@ -140,11 +172,16 @@ class FakeClient:
           - self.calls 存每次请求的记录，初始为空列表
           - self.chat 是一个 SimpleNamespace(completions=_Completions(self))
         """
-        raise NotImplementedError("TODO 第 3 步")
+        self.script: list[str] | None =list(script) if script is not None else None
+        self.calls: list[] = []
+        self.chat: SimpleNamespace = SimpleNamespace(completions=_Completions(self))
 
     def _next(self):
         """弹出剧本里的下一句。剧本为空（或没给）→ 抛 RuntimeError，说明原因。"""
-        raise NotImplementedError("TODO 第 3 步")
+        if not self.script:
+            raise RuntimeError("剧本为空")
+        return _response(self.script.pop(0))
+
 
 
 # ============================================================================
