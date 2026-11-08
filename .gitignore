@@ -17,7 +17,7 @@ env/
 
 # ---- 秘密：API Key 绝不能进 git ----
 .env
-.env.*
+.env
 !.env.example
 
 # ---- 测试/检查产物 ----

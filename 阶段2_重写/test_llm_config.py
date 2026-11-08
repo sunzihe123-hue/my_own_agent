@@ -1,7 +1,7 @@
-"""阶段 2 的验收测试。标准库就够，不联网、不花钱、不装包。
+"""阶段 2 · llm_config.py 的验收测试。标准库就够，不联网、不花钱、不装包。
 
-PyCharm：右键本文件 → Run 'Unittests in test_phase2'
-命令行： cd 阶段2_重写 ; python -m unittest test_phase2 -v
+PyCharm：右键本文件 → Run 'Unittests in test_llm_config'
+命令行： cd 阶段2_重写 ; python -m unittest test_llm_config -v
 """
 
 import os
@@ -13,7 +13,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from phase2 import Config, FakeClient, PROVIDERS, create_client, load_config, load_dotenv
+from llm_config import Config, FakeClient, PROVIDERS, create_client, load_config, load_dotenv
 
 # 测试前后要清理的环境变量：不清理的话，测试之间会互相污染
 ENV_KEYS = [

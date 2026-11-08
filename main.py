@@ -1,19 +1,20 @@
-import os
-from openai import OpenAI
+import sys
+from pathlib import Path
 
-api_key = os.getenv("DEEPSEEK_API_KEY")
+sys.path.insert(0, str(Path(__file__).parent / "阶段2_重写"))
+from llm_config import load_config, create_client, FakeClient
 
-if not api_key:
-    raise RuntimeError("没有读取到 API Key")
+cfg = load_config()
+print(f"provider={cfg.provider}  model={cfg.model}  base_url={cfg.base_url or '(离线)'}")
 
-client = OpenAI(
-    api_key=api_key,
-    base_url="https://api.deepseek.com"
-)    #创建好的客户端client
+if cfg.provider == "fake":
+    client = FakeClient(script=["（离线演示）你好，我是假模型。"])
+else:
+    client = create_client(cfg)
 
 response = client.chat.completions.create(
-                 #chat.completions.create(...)：调用客户端提供的方法，向模型发送一次对话请求
-    model="deepseek-flash",
+    #chat.completions.create(...)：调用客户端提供的方法，向模型发送一次对话请求
+    model=cfg.model,
     messages=[
         {"role": "user", "content": "我好困"}    #role：这条消息是谁说的，"user" 表示用户。
     ]

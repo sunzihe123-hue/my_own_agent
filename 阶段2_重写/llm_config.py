@@ -1,7 +1,12 @@
-"""阶段 2 重写：配置 + 模型客户端。
+"""阶段 2：配置 + 模型客户端。
 
-照 studymate 的 config.py（69 行）+ llm.py（120 行）的最小版写，目标是把
-"读配置 → 拿客户端 → 发一次请求" 这条链路彻底搞明白。
+文件名 llm_config.py = 参考版 config.py + llm.py 两半的合并版：
+  - config.py 负责"配置从哪来"（PROVIDERS / load_dotenv / Config / load_config）
+  - llm.py    负责"怎么跟模型说话"（create_client / FakeClient / _response）
+参考版拆两个文件是因为它有 ~190 行、要支持 4 家厂商；我们只留最小版，
+一个文件放得下，就合并成 llm_config.py。
+
+目标是把"读配置 → 拿客户端 → 发一次请求" 这条链路彻底搞明白。
 
 参考版砍掉了什么（这次不写）：
   - 其他 3 家厂商（qwen / glm / kimi）：只留 deepseek + fake
@@ -14,8 +19,6 @@
   第 3 步  FakeClient（__init__ / _next / _Completions.create）→ TestFakeClient 8 个全绿
   第 4 步  create_client     → TestCreateClient 2 个全绿
 """
-
-from __future__ import annotations
 
 import os
 from dataclasses import dataclass
@@ -127,7 +130,22 @@ def create_client(cfg: Config):
       - 否则延迟导入 openai（fake 模式不需要装 openai），返回 OpenAI(...)
       - 导入失败 → 抛 RuntimeError 提示 pip install openai
     """
-    raise NotImplementedError("TODO 第 4 步")
+    if cfg.provider == "fake":
+        return FakeClient()
+    if not cfg.api_key:
+        raise RuntimeError(
+            "没有找到 API Key。请在项目根目录创建 .env 文件，写入：\n"
+            "  STUDYMATE_PROVIDER=deepseek\n"
+            "  STUDYMATE_API_KEY=你的key\n"
+            "或者先用 STUDYMATE_PROVIDER=fake 离线体验。"
+        )
+    try:
+        from openai import OpenAI
+    except ImportError as e:
+        raise RuntimeError("pip install openai") from e
+    return OpenAI(api_key=cfg.api_key,
+                  base_url=cfg.base_url,
+           )
 
 
 # ============================================================================
@@ -145,7 +163,7 @@ def _response(content: str):
     return SimpleNamespace(choices=[SimpleNamespace(message=message, finish_reason="stop")])
 
 
-class _Completions:
+class _Completions:      #补全，续写
     """挂在 client.chat.completions 上，提供 .create(...)（和真 SDK 同形）。"""
 
     def __init__(self, owner: "FakeClient") -> None:
@@ -159,7 +177,11 @@ class _Completions:
           - messages 要**拷贝**一份再存（见文档 3.10），别存原对象
           - 返回 self._owner._next()
         """
-        raise NotImplementedError("TODO 第 3 步")
+        self._owner.calls.append({
+            "model":model,
+            "messages":[ dict(m) for m in messages],
+            })
+        return self._owner._next()
 
 
 class FakeClient:
@@ -173,7 +195,7 @@ class FakeClient:
           - self.chat 是一个 SimpleNamespace(completions=_Completions(self))
         """
         self.script: list[str] | None =list(script) if script is not None else None
-        self.calls: list[] = []
+        self.calls = []
         self.chat: SimpleNamespace = SimpleNamespace(completions=_Completions(self))
 
     def _next(self):
@@ -185,7 +207,7 @@ class FakeClient:
 
 
 # ============================================================================
-# 六、自测：写完之后在 PyCharm 里右键 Run 'phase2'
+# 六、自测：写完之后在 PyCharm 里右键 Run 'llm_config'
 # ============================================================================
 
 if __name__ == "__main__":

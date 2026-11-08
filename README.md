@@ -10,7 +10,7 @@
 | 阶段 | 内容 | 状态 | 验收 |
 |---|---|---|---|
 | 1 | 任务数据层：dataclass、自定义异常、JSON 持久化、排序/筛选 | ✅ **结业** | 29/29 测试绿，`__main__` 自测跑通 |
-| 2 | 配置 + 模型客户端：`.env` 解析、Config、FakeClient、create_client | 🚧 **进行中** | 21 个测试，当前 11 绿 |
+| 2 | 配置 + 模型客户端：`.env` 解析、Config、FakeClient、create_client | ✅ **结业** | 21/21 测试绿；`main.py` 真机调用 DeepSeek 通过 |
 | 3 | 工具注册表 + agent 循环 | ⬜ 未开始 | — |
 | 4 | 单元测试与工程化 | ⬜ 未开始 | — |
 | 5 | 笔记检索（简易 RAG） | ⬜ 未开始 | — |
@@ -23,9 +23,11 @@ PythonProject/
 ├── main.py                 ← 成品入口：真实模型调用（阶段 2 验收要改它）
 ├── README.md               ← 本文件：项目地图
 ├── 学习方法.md              ← 固定学习流程，每次开工前看一眼
+├── 交接文档.md              ← 换新对话/换 AI 时，先给它看这个（进度、下一步、偏好）
 ├── learning-skill/          ← 学习法的可移植成品（给 Claude/ChatGPT 等用的 skill）
 ├── 速查/                    ← 实验脚本、速查表、笔记（**不进阶段目录**）
 │   ├── 基础语法卡点.md        self / dataclass / 装饰器 / 魔法方法 等 14 条
+│   ├── 英文命名对照.md        英文变量名/缩写的中文意思（看不懂名字先查这里）
 │   ├── 字符串与路径速查表.md   不懂某个方法先看这张表
 │   └── 实验_方法速查.py       想确认某个行为时才跑它
 │
@@ -36,8 +38,8 @@ PythonProject/
 │   └── 结构总览.md          类/方法/import/装饰器/调用关系全景图
 │
 ├── 阶段2_重写/              ← 🚧 进行中
-│   ├── phase2.py           你的实现（.env / Config / FakeClient / create_client）
-│   ├── test_phase2.py      21 个验收测试
+│   ├── llm_config.py       你的实现（.env / Config / FakeClient / create_client 合在一个文件）
+│   ├── test_llm_config.py  21 个验收测试
 │   ├── 说明_为什么.md       12 节"为什么" + 4 个坑
 │   └── 结构总览.md          类/方法/import/装饰器/调用关系全景图
 │
@@ -59,7 +61,7 @@ PythonProject/
 
 1. 解释器：`Settings → Project: PythonProject → Python Interpreter` → `.venv\Scripts\python.exe`
 2. 跑某阶段测试：右键该阶段的 `test_xxx.py` → `Run 'Unittests in test_xxx'`
-3. 看自测输出：右键 `task.py` / `phase2.py` → `Run 'task'` / `Run 'phase2'`
+3. 看自测输出：右键 `task.py` / `llm_config.py` → `Run 'task'` / `Run 'llm_config'`
 
 > ⚠️ **别点基类**：`阶段1_重写` 里的 `StoreTest`、`阶段2_重写` 里的 `Base` 都只有 0 个测试，点了会显示"没有发现测试"。要跑就点具体子类，或者点整个文件。
 
@@ -68,14 +70,14 @@ PythonProject/
 | 现象 | 原因 | 解法 |
 |---|---|---|
 | `UnicodeEncodeError: 'gbk' codec can't encode '\u2713'` | cmd/PowerShell 默认 GBK，编不了 `✓`/`✔` | PyCharm 的 Run 窗口是 UTF-8，直接用；命令行加 `$env:PYTHONIOENCODING='utf-8'` |
-| `ModuleNotFoundError: No module named 'phase2'` | 中文目录名不能当 Python 包 import | 在调用方加 `sys.path.insert(0, str(Path(__file__).parent / "阶段2_重写"))` |
+| `ModuleNotFoundError: No module named 'llm_config'` | 中文目录名不能当 Python 包 import | 在调用方加 `sys.path.insert(0, str(Path(__file__).parent / "阶段2_重写"))` |
 
 ## 参考代码映射（studymate → 本仓库）
 
 | 阶段 | studymate 里的文件 | 本仓库 |
 |---|---|---|
 | 1 | `studymate/tasks.py`（159 行） | `阶段1_重写/task.py` |
-| 2 | `studymate/config.py` + `llm.py`（189 行） | `阶段2_重写/phase2.py` |
+| 2 | `studymate/config.py` + `llm.py`（189 行） | `阶段2_重写/llm_config.py`（合并成一个文件） |
 | 3 | `studymate/tools.py` + `study_tools.py` + `agent.py` | 待建 |
 | 4 | `tests/test_studymate.py` | 待建 |
 | 5 | `studymate/notes.py` + `notes/` | 待建 |
