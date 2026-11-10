@@ -11,7 +11,7 @@
 |---|---|---|---|
 | 1 | 任务数据层：dataclass、自定义异常、JSON 持久化、排序/筛选 | ✅ **结业** | 29/29 测试绿，`__main__` 自测跑通 |
 | 2 | 配置 + 模型客户端：`.env` 解析、Config、FakeClient、create_client | ✅ **结业** | 21/21 测试绿；`main.py` 真机调用 DeepSeek 通过 |
-| 3 | 工具注册表 + agent 循环 | ⬜ 未开始 | — |
+| 3 | 工具注册表 + agent 循环 | 🚧 **进行中** | 28 个测试（`test_tools` 15 + `test_agent` 13），骨架已交付 |
 | 4 | 单元测试与工程化 | ⬜ 未开始 | — |
 | 5 | 笔记检索（简易 RAG） | ⬜ 未开始 | — |
 | 6 | MCP 服务器 | ⬜ 未开始 | — |
@@ -20,10 +20,11 @@
 
 ```
 PythonProject/
-├── main.py                 ← 成品入口：真实模型调用（阶段 2 验收要改它）
+├── main.py                 ← 成品入口：load_config() + create_client()，已真机跑通
 ├── README.md               ← 本文件：项目地图
 ├── 学习方法.md              ← 固定学习流程，每次开工前看一眼
 ├── 交接文档.md              ← 换新对话/换 AI 时，先给它看这个（进度、下一步、偏好）
+├── .env                    ← 本地密钥（被 .gitignore 忽略，绝不提交）
 ├── learning-skill/          ← 学习法的可移植成品（给 Claude/ChatGPT 等用的 skill）
 ├── 速查/                    ← 实验脚本、速查表、笔记（**不进阶段目录**）
 │   ├── 基础语法卡点.md        self / dataclass / 装饰器 / 魔法方法 等 14 条
@@ -37,11 +38,19 @@ PythonProject/
 │   ├── 说明_为什么.md       15 节"为什么" + C 对照表
 │   └── 结构总览.md          类/方法/import/装饰器/调用关系全景图
 │
-├── 阶段2_重写/              ← 🚧 进行中
+├── 阶段2_重写/              ← ✅ 结业
 │   ├── llm_config.py       你的实现（.env / Config / FakeClient / create_client 合在一个文件）
 │   ├── test_llm_config.py  21 个验收测试
 │   ├── 说明_为什么.md       12 节"为什么" + 4 个坑
 │   └── 结构总览.md          类/方法/import/装饰器/调用关系全景图
+│
+├── 阶段3_重写/              ← 🚧 进行中（骨架已交付）
+│   ├── tools.py            你填：工具注册表（Tool / ToolRegistry / @tool / schemas / execute）
+│   ├── agent.py            你填：agent 循环（Agent.__init__ / _call_model / chat）
+│   ├── test_tools.py       15 个验收测试
+│   ├── test_agent.py       13 个验收测试（内含"能假装要工具"的假客户端）
+│   ├── 说明_为什么.md       11 节"为什么" + 5 个坑 + C 对照表
+│   └── 结构总览.md          图 / import / 部件 / 数据流 / 验收对照
 │
 └── 草稿/                    ← 归档区：练过的、练废的，只挪不删
     ├── tasks.py            474 行的手册 v2 版（无持久化，已被阶段 1 超越）
@@ -78,7 +87,7 @@ PythonProject/
 |---|---|---|
 | 1 | `studymate/tasks.py`（159 行） | `阶段1_重写/task.py` |
 | 2 | `studymate/config.py` + `llm.py`（189 行） | `阶段2_重写/llm_config.py`（合并成一个文件） |
-| 3 | `studymate/tools.py` + `study_tools.py` + `agent.py` | 待建 |
+| 3 | `studymate/tools.py` + `study_tools.py` + `agent.py` | `阶段3_重写/tools.py` + `agent.py`（工具只留 2 个示例） |
 | 4 | `tests/test_studymate.py` | 待建 |
 | 5 | `studymate/notes.py` + `notes/` | 待建 |
 | 6 | `studymate/mcp_server.py` | 待建 |

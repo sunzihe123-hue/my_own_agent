@@ -16,7 +16,7 @@ response = client.chat.completions.create(
     #chat.completions.create(...)：调用客户端提供的方法，向模型发送一次对话请求
     model=cfg.model,
     messages=[
-        {"role": "user", "content": "我好困"}    #role：这条消息是谁说的，"user" 表示用户。
+        {"role": "user", "content": "钛价格与优势"}    #role：这条消息是谁说的，"user" 表示用户。
     ]
 )
 
