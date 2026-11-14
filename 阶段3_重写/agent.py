@@ -17,15 +17,23 @@ agent 的本质是一个循环：
   第 5 步  Agent.__init__    → 2 个变绿
   第 6 步  Agent._call_model → 5 个变绿（累计）
   第 7 步  Agent.chat()      → 13 个全绿
+
+阶段 4 追加：本文件要补 3 处日志（工程化的意义 = 测试证明"行为对"，日志证明"过程可查"）。
+  TODO 日志①  chat() 每轮开头     ：第几轮 + 历史条数
+  TODO 日志②  工具执行前/后两行    ：name / arguments、result
+  TODO 日志③  _call_model() 异常分支：log.exception（记完必须原样 raise）
 """
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 
-from openai.types.beta import assistant
-
 from tools import ToolRegistry
+
+# 模块级日志器（logger = 日志器）：名字取 __name__，被 import 时就是模块名 "agent"。
+# 阶段 4 已给好，不用改；下面三处 TODO 就往它上面写。
+log = logging.getLogger(__name__)
 
 DEFAULT_SYSTEM_PROMPT = """你是 StudyMate，一名大学生的学习助手，用简洁友好的中文回答。
 规则：
@@ -79,6 +87,9 @@ class Agent:
         """
         self.messages.append({"role": "user", "content": user_text})
         for step in range(self.max_steps):
+            # TODO 日志①（1 行）：每轮请求开头记一条 info
+            #   内容：第几轮（step + 1）+ 当前历史条数（len(self.messages)）
+            #   用途：事后能还原"模型当时看到的是多长的对话"（排查越聊越傻的经典手段）
             msg = self._call_model()
             if not msg.tool_calls:
                 text = msg.content or ""
@@ -95,7 +106,11 @@ class Agent:
                 "content": msg.content or ""
             })
             for tc in msg.tool_calls:
+                # TODO 日志②-a（1 行）：执行**前**记一条 info：工具名 + 参数原文
+                #   （参数原文 = tc.function.arguments；这是 test_agent_log.py 第 5 条的数据来源）
                 result = self.registry.execute(tc.function.name, tc.function.arguments)
+                # TODO 日志②-b（1 行）：执行**后**记一条 info：工具名 + result
+                #   （这是 test_agent_log.py 第 6 条的数据来源）
                 self.messages.append({
                     "role": "tool",
                     "tool_call_id": tc.id,
@@ -111,6 +126,13 @@ class Agent:
         发一次请求，返回 resp.choices[0].message。
         注意要把 tools=self.registry.schemas() or None 传上去：
         注册表为空时传 None（有的接口不接受空列表）。
+
+        阶段 4 追加（TODO 日志③）：把下面这次调用包进 try / except Exception
+          - except 分支里先 log.exception("...")，再 **原样 raise** 重新抛出
+          - 为什么用 log.exception 而不是 log.error：它会把完整调用栈（traceback）写进日志，
+            事后能直接看出是哪一行炸的；log.error 只有一句话
+          - 为什么必须 raise：日志是"记录"，不是"处理"；吞掉异常会让上层误以为成功
+          - 现有的两行代码要缩进进 try 里（这是阶段 4 唯一改结构的地方）
         """
         resp = self.client.chat.completions.create(
             model = self.model,
