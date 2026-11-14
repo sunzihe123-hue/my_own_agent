@@ -1,4 +1,4 @@
-﻿"""阶段 3 · agent 主循环（对应 studymate/agent.py，142 行砍成最小版）。
+"""阶段 3 · agent 主循环（对应 studymate/agent.py，142 行砍成最小版）。
 
 agent 的本质是一个循环：
 
@@ -23,6 +23,8 @@ from __future__ import annotations
 
 from datetime import date
 
+from openai.types.beta import assistant
+
 from tools import ToolRegistry
 
 DEFAULT_SYSTEM_PROMPT = """你是 StudyMate，一名大学生的学习助手，用简洁友好的中文回答。
@@ -45,7 +47,12 @@ class Agent:
                 {"role": "system", "content": DEFAULT_SYSTEM_PROMPT 里把 {today} 替换成今天}
             提示：字符串的 .replace("{today}", date.today().isoformat())
         """
-        raise NotImplementedError("TODO 第 5 步")
+        self.client = client
+        self.model = model
+        self.registry = registry
+        self.max_steps = max_steps
+        prompt = DEFAULT_SYSTEM_PROMPT.replace("{today}", date.today().isoformat())
+        self.messages :list[dict] = [{"role":"system","content":prompt}]
 
     def chat(self, user_text: str) -> str:
         """TODO 第 7 步：本阶段最核心的 ~25 行。
@@ -70,7 +77,33 @@ class Agent:
              "（思考步数太多，我先停下了。可以把问题说得更具体一点再试试。）"），
              并把这句话记进历史
         """
-        raise NotImplementedError("TODO 第 7 步")
+        self.messages.append({"role": "user", "content": user_text})
+        for step in range(self.max_steps):
+            msg = self._call_model()
+            if not msg.tool_calls:
+                text = msg.content or ""
+                self.messages.append({"role": "assistant", "content": text})
+                return text
+            calls = [{
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
+                    for tc in msg.tool_calls]
+            self.messages.append({
+                "role": "assistant",
+                "tool_calls": calls,
+                "content": msg.content or ""
+            })
+            for tc in msg.tool_calls:
+                result = self.registry.execute(tc.function.name, tc.function.arguments)
+                self.messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": str(result)
+                })   #工具返回结果必须是字符串
+        final_text = "思考步数太多，我先停下了。可以把问题说得更具体一点再试试。"
+        self.messages.append({"role": "assistant","content": final_text})
+        return final_text
 
     def _call_model(self):
         """TODO 第 6 步（2 行）。
@@ -79,4 +112,9 @@ class Agent:
         注意要把 tools=self.registry.schemas() or None 传上去：
         注册表为空时传 None（有的接口不接受空列表）。
         """
-        raise NotImplementedError("TODO 第 6 步")
+        resp = self.client.chat.completions.create(
+            model = self.model,
+            messages = self.messages,
+            tools = self.registry.schemas() or None,
+        )
+        return resp.choices[0].message

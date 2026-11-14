@@ -55,19 +55,15 @@ class Tool:
     def schema(self) -> dict:
         """TODO 第 2 步：拼出 OpenAI 要的工具描述（3 行左右）。
 
-        期望形状（test_schema_shape 会逐项检查）：
-            {
-                "type": "function",
-                "function": {
-                    "name": self.name,
-                    "description": self.description,
-                    "parameters": self.parameters,
-                },
+        （test_schema_shape 会逐项检查）："""
+        return{
+            "type":"function",
+            "function":{
+                "name": self.name,
+                "description":self.description,
+                "parameters": self.parameters,
             }
-        """
-
-        raise NotImplementedError("TODO 第 2 步")
-
+        }
 
 @dataclass
 class ToolRegistry:
@@ -99,23 +95,31 @@ class ToolRegistry:
             hints = typing.get_type_hints(func)
             properties = {}
             required = []
-            for name,p in sig.parameters.items():
-                type_hint = hints.get(p.name)
-                properties = {"type":_json_type(type_hint)}
-            
-            if name in params:
+            for name,param in sig.parameters.items():
 
-
-
+                properties[name] = {"type":_json_type(hints.get(name, str))}
+                if name in params:
+                    properties[name]["description"] = params[name]
+                if param.default is inspect.Parameter.empty:
+                    required.append(name)
+            parameters = {"type": "object", "properties": properties, "required": required}
+            self.tools[func.__name__] =(
+                Tool(
+                     name = func.__name__,
+                     description=description,
+                     func = func,
+                     parameters=parameters,)
+                                                 )
+            return func
 
         return decorator
 
     def schemas(self) -> list[dict]:
         """TODO 第 3 步：所有工具的 schema 列表（发给模型的就是它）。
 
-        提示：一个列表推导式就够。
+        一个列表推导式就够。
         """
-        raise NotImplementedError("TODO 第 3 步")
+        return [t.schema() for t in self.tools.values()]
 
     def execute(self, name: str, arguments: str | dict) -> str:
         """TODO 第 4 步：执行工具，结果**一律转成字符串**（模型只能读文本）。
@@ -132,4 +136,26 @@ class ToolRegistry:
             它通常会自己改正后重试；抛出去整个对话就断了
           - 结果是 str 原样返回；其他类型 → json.dumps(result, ensure_ascii=False, default=str)
         """
-        raise NotImplementedError("TODO 第 4 步")
+        if name not in self.tools:
+            return f"错误：没有名为 {name} 的工具"
+        try:
+            if isinstance(arguments,str):
+                args = json.loads(arguments)
+            if isinstance(arguments,dict):
+                args = dict(arguments)
+            if not isinstance(args,dict):
+                return "错误：参数必须是 JSON 对象"
+        except json.decoder.JSONDecodeError:
+            return "错误：参数不是合法 JSON 对象"
+        try:
+            tool = self.tools[name]
+            result = tool.func(**args)
+        except TypeError:
+            return "错误：参数不匹配"
+        except Exception as e:
+            return f"错误：{e}"
+        if isinstance(result,str):
+            return result
+        return json.dumps(result, ensure_ascii=False, default = str)
+
+
